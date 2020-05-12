@@ -23,6 +23,11 @@ Options:
                 Critical treshold
     -d, --debug
                 Turn on debugging
+
+    --warning-reserved=TRESHOLD (default: 80)
+                Warning treshold for reserved diskspace
+    --critical-reserved=TRESHOLD (default: 90)
+                Critical treshold for reserved diskspace
 ```
 
 ## Supported commands 
