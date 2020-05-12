@@ -26,7 +26,9 @@
 
 VERSION="1.3"
 CAPWARN=80  # warning at 80% of used disc capacity
-CAPCRIT=90  # warnint at 90% of user disc capacity
+CAPCRIT=90  # warning at 90% of user disc capacity
+RESWARN=80  # warning at 80% of reserved disc capacity
+RESCRIT=90  # warning at 90% of reserved disc capacity
 VERBOSE=0   # how verbose to be
 
 # Strict variable checking
@@ -84,7 +86,13 @@ Options:
                 Turn on debugging
     -v, --verbose
                 increment verbosity if supported (multiple use allowed)
-    
+
+    --warning-reserved=TRESHOLD (default: 80)
+                Warning treshold for reserved diskspace
+    --critical-reserved=TRESHOLD (default: 90)
+                Critical treshold for reserved diskspace
+
+
     COMMAND     use --help to get details
 
 "
@@ -175,16 +183,18 @@ while getopts "${OPTS}" OPTION ; do
             OPTION=$(echo ${OPTION} | cut -d'=' -f1)
             dbg "- option ${OPTION} optind ${OPTIND} optarg ${OPTARG}"
             case ${OPTION} in
-                --debug )           DBG="y" ;;
-                --verbose)          VERBOSE=$((++VERBOSE)) ;;
-                --help )            helplong ;;
-                --hostname )        INSERV="${OPTARG}" ;;
-                --inform-bin )      INFORMBIN="${OPTARG}" ;;
-                --username )        USERNAME="${OPTARG}" ;;
-                --ssh-key )         KEYFILE="${OPTARG}" ;;
-                --password-file )   USERNAME="${OPTARG}" ;;
-                --warning )         CAPWARN="${OPTARG}" ;;
-                --critical )        CAPCRIT="${OPTARG}" ;;
+                --debug )             DBG="y" ;;
+                --verbose)            VERBOSE=$((++VERBOSE)) ;;
+                --help )              helplong ;;
+                --hostname )          INSERV="${OPTARG}" ;;
+                --inform-bin )        INFORMBIN="${OPTARG}" ;;
+                --username )          USERNAME="${OPTARG}" ;;
+                --ssh-key )           KEYFILE="${OPTARG}" ;;
+                --password-file )     USERNAME="${OPTARG}" ;;
+                --warning )           CAPWARN="${OPTARG}" ;;
+                --critical )          CAPCRIT="${OPTARG}" ;;
+                --warning-reserved )  RESWARN="${OPTARG}" ;;
+                --critical-reserved ) RESCRIT="${OPTARG}" ;;
                 ?  )  usage "Invalid option '${OPTARG}'" ;;
                 *  )  usage "parsing options failed";;
             esac
@@ -244,6 +254,8 @@ PCCRITICAL="${CAPCRIT}"
 PCWARNING="${CAPWARN}"
 CRITICAL="${CAPCRIT}"
 WARNING="${CAPWARN}"
+RESERVED_CRITICAL=${RESCRIT}
+RESERVED_WARNING=${RESWARN}
 
 # CLI or SSH
 if [ -n "${INFORMBIN:-}" ]
@@ -522,37 +534,62 @@ then
 
     TMPOUT=$( echo "${TMPOUT}" | grep ",base," | grep ",${CMDARG1}," )
 
-    VSIZE=$( echo "${TMPOUT}" | cut -d, -f12 )
+    VSIZE=$( echo "${TMPOUT}" | cut -d, -f18 )
     VSIZE_Gb="$(( ${VSIZE} / 1024 ))"
 
-    USED=$( echo "${TMPOUT}" | cut -d, -f11 )
+    USED=$( echo "${TMPOUT}" | cut -d, -f13 )
     USED_Gb="$(( ${USED} / 1024 ))"
+
+    RESERVED=$( echo "${TMPOUT}" | cut -d, -f12 )
+    RESERVED_Gb="$(( ${RESERVED} / 1024 ))"
 
     FREE="$(( ${VSIZE} - ${USED} ))"
     FREE_Gb="$(( ${FREE} / 1024 ))"
 
+    RESERVEDPERCENT="$(( ( ( ${RESERVED} * 100 ) / ${VSIZE} ) ))"
     FREEPERCENT="$((  100 - ( ( ${USED} * 100 ) / ${VSIZE} ) ))"
     USEDPERCENT="$((  100 - ( ${FREEPERCENT} ) ))"
 
-    WARNCRAW="$(( ${VSIZE}*${WARNING}/100))"
-    WARNCRAW_Gb="$(( ${WARNCRAW} / 1024 ))"
+    USED_WARNCRAW="$(( ${VSIZE}*${WARNING}/100))"
+    USED_WARNCRAW_Gb="$(( ${USED_WARNCRAW} / 1024 ))"
 
-    CRITCCRAW="$(( ${VSIZE}*${CRITICAL}/100 ))"
-    CRITCCRAW_Gb="$(( ${CRITCCRAW} / 1024 ))"
+    USED_CRITCCRAW="$(( ${VSIZE}*${CRITICAL}/100 ))"
+    USED_CRITCCRAW_Gb="$(( ${USED_CRITCCRAW} / 1024 ))"
 
-    MSG="TOTAL: ${VSIZE}Mb USED: ${USED}Mb (${USEDPERCENT}%) FREE: ${FREE}Mb (${FREEPERCENT}%) TotSize=${VSIZE_Gb}Gb Used=${USED_Gb}Gb, Warn on used: ${WARNCRAW_Gb}Gb, Critical on Used: ${CRITCCRAW_Gb}Gb"
+    RESERVED_WARNCRAW="$(( ${VSIZE}*${RESERVED_WARNING}/100))"
+    RESERVED_WARNCRAW_Gb="$(( ${RESERVED_WARNCRAW} / 1024 ))"
 
-    if [ ${USED_Gb} -ge ${CRITCCRAW_Gb} ]
+    RESERVED_CRITCCRAW="$(( ${VSIZE}*${RESERVED_CRITICAL}/100 ))"
+    RESERVED_CRITCCRAW_Gb="$(( ${RESERVED_CRITCCRAW} / 1024 ))"
+
+    MSG="TOTAL: ${VSIZE}Mb RESERVED: ${RESERVED}Mb (${RESERVEDPERCENT}%) USED: ${USED}Mb (${USEDPERCENT}%)"
+    MSG="${MSG} | "
+    MSG="${MSG}total=${VSIZE}MB;;;; "
+    MSG="${MSG}reserved=${RESERVED}MB;${RESERVED_WARNCRAW}MB;${RESERVED_CRITCCRAW}MB;; "
+    MSG="${MSG}used=${USED}MB;${USED_WARNCRAW}MB;${USED_CRITCCRAW}MB;;"
+
+    if [ ${USED_Gb} -ge ${USED_CRITCCRAW_Gb} ]
     then
-        output CRITICAL "${MSG}"
-    else
-        if [ ${USED_Gb} -ge ${WARNCRAW_Gb} ]
-        then
-            output WARNING "${MSG}"
-        else
-            output OK "${MSG}"
-        fi
+        output CRITICAL "T ${MSG}"
     fi
+
+    if [ ${RESERVED_Gb} -ge ${RESERVED_CRITCCRAW_Gb} ]
+    then
+        output CRITICAL "R ${MSG}"
+    fi
+
+    if [ ${USED_Gb} -ge ${USED_WARNCRAW_Gb} ]
+    then
+        output WARNING "T ${MSG}"
+    fi
+
+    if [ ${RESERVED_Gb} -ge ${RESERVED_WARNCRAW_Gb} ]
+    then
+        output WARNING "R ${MSG}"
+    fi
+
+
+    output OK "${MSG}"
 fi 
 
 if [ "${COMMAND}" == "check_qw" ]
