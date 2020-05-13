@@ -520,7 +520,7 @@ then
         usage "Command 'check_volume' needs VOLUMENAME as additional parameter."
     fi
 
-    TMPOUT=$( ${CONNECTCOMMAND} showvv ${CMDARG1} -csvtable 2>&1 )
+    TMPOUT=$( ${CONNECTCOMMAND} showvv -s ${CMDARG1} -csvtable 2>&1 )
     if [ $? -gt 0 ]
     then
         output UNKNOWN "Could not connect to 3PAR ${INSERV}"
