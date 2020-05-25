@@ -87,9 +87,9 @@ Options:
     -v, --verbose
                 increment verbosity if supported (multiple use allowed)
 
-    --warning-reserved=TRESHOLD (default: 80)
+    -rw, --warning-reserved=TRESHOLD (default: 80)
                 Warning treshold for reserved diskspace
-    --critical-reserved=TRESHOLD (default: 90)
+    -rc, --critical-reserved=TRESHOLD (default: 90)
                 Critical treshold for reserved diskspace
 
 
@@ -165,42 +165,28 @@ exit 128
 [ "$#" = 0 ] &&  usage "Too few arguments."
 
 while getopts "${OPTS}" OPTION ; do
+    # support long options: https://stackoverflow.com/a/28466267/519360
+    if [ "$OPTION" = "-" ]; then # long option: reformulate OPT and OPTARG
+      OPTION="${OPTARG%%=*}"    # extract long option name
+      OPTARG="${OPTARG#$OPTION}"   # extract long option argument (may be empty)
+      OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
+    fi
+
     dbg "option ${OPTION} optind ${OPTIND} optarg ${OPTARG:-}"
+
     case "${OPTION}" in
-        d  ) DBG="y";;
-        v  ) VERBOSE=$((++VERBOSE)) ;;
-        h  ) usage ;;   
-        H  ) INSERV="${OPTARG}" ;;
-        i  ) INFORMBIN="${OPTARG}" ;;
-        u  ) USERNAME="${OPTARG}" ;;
-        k  ) KEYFILE="${OPTARG}" ;;
-        p  ) PASSFILE="${OPTARG}" ;;
-        w  ) CAPWARN="${OPTARG}" ;;
-        c  ) CAPCRIT="${OPTARG}" ;;
-        -  ) [ ${OPTIND} -ge 1 ] && optind=$(expr ${OPTIND} - 1 ) || optind=${OPTIND}
-            eval OPTION="\$$optind"
-            OPTARG=$(echo ${OPTION} | cut -d'=' -f2)
-            OPTION=$(echo ${OPTION} | cut -d'=' -f1)
-            dbg "- option ${OPTION} optind ${OPTIND} optarg ${OPTARG}"
-            case ${OPTION} in
-                --debug )             DBG="y" ;;
-                --verbose)            VERBOSE=$((++VERBOSE)) ;;
-                --help )              helplong ;;
-                --hostname )          INSERV="${OPTARG}" ;;
-                --inform-bin )        INFORMBIN="${OPTARG}" ;;
-                --username )          USERNAME="${OPTARG}" ;;
-                --ssh-key )           KEYFILE="${OPTARG}" ;;
-                --password-file )     USERNAME="${OPTARG}" ;;
-                --warning )           CAPWARN="${OPTARG}" ;;
-                --critical )          CAPCRIT="${OPTARG}" ;;
-                --warning-reserved )  RESWARN="${OPTARG}" ;;
-                --critical-reserved ) RESCRIT="${OPTARG}" ;;
-                ?  )  usage "Invalid option '${OPTARG}'" ;;
-                *  )  usage "parsing options failed";;
-            esac
-            #OPTIND=1
-            #shift
-            ;;
+        d  | debug  ) DBG="y";;
+        v  | verbose  ) VERBOSE=$((++VERBOSE)) ;;
+        h  | help  ) usage ;;
+        H  | hostname  ) INSERV="${OPTARG}" ;;
+        i  | inform-bin  ) INFORMBIN="${OPTARG}" ;;
+        u  | username  ) USERNAME="${OPTARG}" ;;
+        k  | ssh-key  ) KEYFILE="${OPTARG}" ;;
+        p  | password-file  ) PASSFILE="${OPTARG}" ;;
+        w  | warning  ) CAPWARN="${OPTARG}" ;;
+        c  | critical  ) CAPCRIT="${OPTARG}" ;;
+        rw | warning-reserved )  RESWARN="${OPTARG}" ;;
+        rc | critical-reserved ) RESCRIT="${OPTARG}" ;;
         ?  )  usage "Invalid option '${OPTARG}'"  ;;
         *  )  usage "parsing options failed";;
     esac
