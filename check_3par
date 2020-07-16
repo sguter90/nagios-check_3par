@@ -520,13 +520,16 @@ then
 
     TMPOUT=$( echo "${TMPOUT}" | grep ",base," | grep ",${CMDARG1}," )
 
+    # Virtual Size (full disk size)
     VSIZE=$( echo "${TMPOUT}" | cut -d, -f18 )
     VSIZE_Gb="$(( ${VSIZE} / 1024 ))"
 
     USED=$( echo "${TMPOUT}" | cut -d, -f13 )
     USED_Gb="$(( ${USED} / 1024 ))"
 
-    RESERVED=$( echo "${TMPOUT}" | cut -d, -f12 )
+    RESERVED_USR=$( echo "${TMPOUT}" | cut -d, -f12 )
+    RESERVED_SNP=$( echo "${TMPOUT}" | cut -d, -f7 )
+    RESERVED="$(( ${RESERVED_USR} + ${RESERVED_SNP} ))"
     RESERVED_Gb="$(( ${RESERVED} / 1024 ))"
 
     FREE="$(( ${VSIZE} - ${USED} ))"
