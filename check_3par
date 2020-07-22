@@ -87,9 +87,9 @@ Options:
     -v, --verbose
                 increment verbosity if supported (multiple use allowed)
 
-    -rw, --warning-reserved=TRESHOLD (default: 80)
+    --warning-reserved=TRESHOLD (default: 80)
                 Warning treshold for reserved diskspace
-    -rc, --critical-reserved=TRESHOLD (default: 90)
+    --critical-reserved=TRESHOLD (default: 90)
                 Critical treshold for reserved diskspace
 
 
@@ -185,8 +185,8 @@ while getopts "${OPTS}" OPTION ; do
         p  | password-file  ) PASSFILE="${OPTARG}" ;;
         w  | warning  ) CAPWARN="${OPTARG}" ;;
         c  | critical  ) CAPCRIT="${OPTARG}" ;;
-        rw | warning-reserved )  RESWARN="${OPTARG}" ;;
-        rc | critical-reserved ) RESCRIT="${OPTARG}" ;;
+        warning-reserved )  RESWARN="${OPTARG}" ;;
+        critical-reserved ) RESCRIT="${OPTARG}" ;;
         ?  )  usage "Invalid option '${OPTARG}'"  ;;
         *  )  usage "parsing options failed";;
     esac
